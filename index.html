@@ -1,1 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCRD AI 21개 지표 정밀 분석기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans KR"', 'sans-serif'],
+                        cute: ['"Gaegu"', 'cursive'],
+                    },
+                    colors: {
+                        pastelPink: '#FFDEE9',
+                        pastelBlue: '#B5FFFC',
+                        pastelMint: '#E2FBE9',
+                        brand: {
+                            500: '#FF9AA2',
+                            600: '#FF85A1',
+                            700: '#FF7096',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background: linear-gradient(135deg, #FFDEE9 0%, #B5FFFC 100%); min-height: 100vh; }
+        .cute-card { background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px); border-radius: 2rem; border: 4px solid white; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
+        .loading-dots:after { content: ' .'; animation: dots 1.5s steps(5, end) infinite; }
+        @keyframes dots { 0%, 20% { color: rgba(0,0,0,0); text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); } 40% { color: #FF85A1; text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); } 60% { text-shadow: .25em 0 0 #FF85A1, .5em 0 0 rgba(0,0,0,0); } 80%, 100% { text-shadow: .25em 0 0 #FF85A1, .5em 0 0 #FF85A1; } }
+        .evidence-bubble { font-size: 0.75rem; background: #fff; border-radius: 1rem; border: 1px solid #eee; border-left: 5px solid #FF9AA2; padding: 0.75rem; margin-top: 0.5rem; color: #444; line-height: 1.4; position: relative; }
+        .metric-group-title { font-family: 'Gaegu', cursive; font-size: 1.4rem; color: #FF7096; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.6rem; margin-top: 1.5rem; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #FFDEE9; border-radius: 10px; }
+        
+        .rating-group { display: flex; background: #f1f5f9; border-radius: 12px; padding: 4px; gap: 4px; border: 1px solid #e2e8f0; }
+        .rating-btn { flex: 1; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s; text-align: center; color: #64748b; min-width: 45px; }
+        .rating-btn:hover { background: #fff; }
+        .rating-btn.active-0 { background: #ef4444; color: white; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3); }
+        .rating-btn.active-1 { background: #f59e0b; color: white; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3); }
+        .rating-btn.active-2 { background: #10b981; color: white; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3); }
 
+        .paper-info-badge { background: white; border: 2px solid #FFDEE9; border-radius: 1.5rem; padding: 1.5rem; margin-bottom: 2rem; display: flex; flex-direction: column; gap: 0.5rem; position: relative; overflow: hidden; }
+        .paper-info-badge::before { content: ""; position: absolute; left: 0; top: 0; height: 100%; width: 6px; background: #FF9AA2; }
+
+        .total-score-box { background: white; border-top: 4px solid #FF9AA2; border-radius: 0 0 2rem 2rem; padding: 1.5rem 2rem; margin-top: -2rem; z-index: 10; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -10px 20px -5px rgba(0, 0, 0, 0.03); }
+    </style>
+</head>
+<body class="p-4 md:p-8 pb-24">
+
+    <header class="max-w-6xl mx-auto mb-8 text-center">
+        <h1 class="text-4xl md:text-5xl font-cute font-bold text-brand-700 mb-2 drop-shadow-sm">✨ SCRD 전문가 분석 대시보드 ✨</h1>
+        <p class="text-neutral-600 text-sm font-medium italic">"논문의 서지 정보와 지표별 질적 수준을 정밀하게 분석합니다."</p>
+    </header>
+
+    <main class="max-w-6xl mx-auto flex flex-col gap-8">
+        
+        <!-- 상단: 업로드 및 논문 정보 섹션 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="cute-card p-8 text-center flex flex-col justify-center">
+                <div id="upload-zone" class="cursor-pointer group">
+                    <div class="bg-brand-500 text-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-cute font-bold text-neutral-700">논문 PDF 불러오기</h2>
+                    <input type="file" id="pdf-input" accept=".pdf" class="hidden">
+                </div>
+                
+                <div id="analysis-status" class="hidden mt-4 p-3 bg-white/50 rounded-xl border border-brand-100">
+                    <div class="flex items-center justify-center gap-2">
+                        <div class="w-3 h-3 bg-brand-500 rounded-full animate-bounce"></div>
+                        <span class="text-sm font-cute font-bold text-brand-600 loading-dots">정밀 분석 진행 중</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="md:col-span-2 paper-info-badge shadow-sm">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="bg-brand-100 text-brand-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter">Current Analysis</span>
+                </div>
+                <h3 id="info-title" class="text-xl font-bold text-neutral-800 leading-tight">분석된 논문이 없습니다.</h3>
+                <div class="flex flex-wrap gap-x-6 gap-y-2 mt-2">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs font-bold text-neutral-400">저자:</span>
+                        <span id="info-author" class="text-sm font-medium text-neutral-600">-</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs font-bold text-neutral-400">연도:</span>
+                        <span id="info-year" class="text-sm font-medium text-neutral-600">-</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs font-bold text-neutral-400">평가진행:</span>
+                        <span id="check-counter" class="text-sm font-bold text-brand-500">0 / 21</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 하단: 지표 리포트 섹션 -->
+        <div class="flex flex-col">
+            <div class="cute-card p-8 rounded-b-none min-h-[500px]">
+                <div class="flex items-center justify-between mb-6 border-b border-brand-50 pb-4">
+                    <h2 class="text-2xl font-cute font-bold text-neutral-800">📋 질적 지표 분석 리포트</h2>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-1">
+                            <div class="w-3 h-3 bg-red-500 rounded-full"></div><span class="text-[10px] font-bold text-neutral-500">0: 미흡</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <div class="w-3 h-3 bg-amber-500 rounded-full"></div><span class="text-[10px] font-bold text-neutral-500">1: 부분</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <div class="w-3 h-3 bg-emerald-500 rounded-full"></div><span class="text-[10px] font-bold text-neutral-500">2: 완전</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="report-container" class="space-y-6 overflow-y-auto max-h-[800px] pr-2 custom-scrollbar">
+                    <div class="flex flex-col items-center justify-center py-32 opacity-20">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mb-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        <p class="font-cute text-xl">PDF 파일을 업로드하면 정밀 분석이 시작됩니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 총점 표시 영역 -->
+            <div id="summary-footer" class="total-score-box hidden">
+                <div class="flex flex-col">
+                    <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Scientific Quality Score</span>
+                    <div class="flex items-baseline gap-2">
+                        <span id="final-total-score" class="text-4xl font-cute font-bold text-brand-600">0</span>
+                        <span class="text-lg font-cute text-neutral-300">/ 42 total</span>
+                    </div>
+                </div>
+                <div class="flex flex-col items-end">
+                    <div class="text-right mb-1">
+                        <span class="text-[10px] font-bold text-neutral-500 mr-2">달성률</span>
+                        <span id="final-percent" class="text-lg font-bold text-neutral-700">0%</span>
+                    </div>
+                    <div class="w-48 h-2 bg-neutral-100 rounded-full overflow-hidden">
+                        <div id="final-progress-bar" class="h-full bg-brand-500 transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const apiKey = ""; 
+        
+        const scrdFullMetrics = [
+            { group: "1. 맥락과 환경", icon: "🏠", items: [
+                { id: "1.1", title: "맥락 및 환경 기술", desc: "물리적 공간, 프로그램 유형, 교육과정, 지리적 위치, SES 등 상세 설명 필수" }
+            ]},
+            { group: "2. 연구 참여자", icon: "👤", items: [
+                { id: "2.1", title: "인구통계학적 특성", desc: "SES(사회경제적 지위) 누락 시 반드시 1점 이하 판정." },
+                { id: "2.2", title: "장애 특성 및 판별", desc: "구체적인 판별 방법(표준화 검사 등) 기술 여부" }
+            ]},
+            { group: "3. 중재자", icon: "🧑‍🏫", items: [
+                { id: "3.1", title: "중재자 역할 및 배경", desc: "역할 명시 및 배경 설명" },
+                { id: "3.2", title: "중재자 훈련 및 자격", desc: "훈련 시간/회기, 통과 기준 등 수치 부재 시 0점 판정." }
+            ]},
+            { group: "4. 중재 정보 제공", icon: "📦", items: [
+                { id: "4.1", title: "중재 과정의 구체성", desc: "매뉴얼, 투여 정도 구체적 설명 및 출처 인용" },
+                { id: "4.2", title: "중재 자료의 구체성", desc: "사용 자료(교구 등) 설명 및 출처 인용" }
+            ]},
+            { group: "5. 중재 충실도", icon: "🎯", items: [
+                { id: "5.1", title: "충실도 직접 측정 (5.1/5.2)", desc: "직접적/신뢰로운 측정치(관찰/자기보고)로 핵심요소 보고 필수. 부재 시 0점." },
+                { id: "5.3", title: "충실도 측정의 균형성", desc: "전 과정 균형 및 단위별 평가 필수. 불충족 시 0점." }
+            ]},
+            { group: "6. 내적 타당도", icon: "⚖️", items: [
+                { id: "6.1", title: "독립변인 실험 통제", desc: "실험자에 의한 체계적인 조정 및 통제" },
+                { id: "6.2", title: "기초선 상태 기술", desc: "정의, 기간, 빈도, 교사 비율 등 상세 제시 필수. 모호할 경우 0점 판정." },
+                { id: "6.3", title: "기초선 내 중재 차단", desc: "기초선 조건에서 중의적 중재 제공 여부" },
+                { id: "6.5", title: "효과 입증의 반복", desc: "3개 시점에서 적어도 3번 이상의 효과 제시" },
+                { id: "6.6", title: "기초선 데이터 포인트", desc: "최소 3개 포인트 확인" },
+                { id: "6.7", title: "연구 설계의 적절성", desc: "공인된 설계 및 내적 타당도 위협 통제" }
+            ]},
+            { group: "7. 결과 및 종속변인", icon: "📊", items: [
+                { id: "7.1", title: "사회적 중요성", desc: "삶의 질 및 발달 결과 연관성 명시" },
+                { id: "7.2", title: "조작적 정의", desc: "명확하고 구체적인 측정 정의" },
+                { id: "7.3", title: "모든 측정치 보고", desc: "긍정/부정 모든 데이터 투명 보고" },
+                { id: "7.4", title: "측정 빈도 및 시점", desc: "각 시점 최소 3개(변동 4번) 데이터 포인트" },
+                { id: "7.5", title: "신뢰도 수치 제시", desc: "일치도 80%, Kappa 60% 이상 기준 확인. 구체적 수치(%) 부재 시 0점." }
+            ]},
+            { group: "8. 데이터 분석", icon: "📈", items: [
+                { id: "8.2", title: "그래프 및 시각적 분석", desc: "수준, 경향, 중복, 일관성 상세 기술 필수. 누락 시 1점." }
+            ]}
+        ];
+
+        let currentUserRatings = {}; 
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        async function extractText(file) {
+            const buffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+            let text = "";
+            for (let i = 1; i <= Math.min(pdf.numPages, 40); i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                text += content.items.map(s => s.str).join(" ") + "\n";
+            }
+            return text;
+        }
+
+        async function runAIAnalysis(text) {
+            const status = document.getElementById('analysis-status');
+            status.classList.remove('hidden');
+
+            const systemPrompt = `당신은 SCRD 질적 지표 분석 전문가입니다. 논문의 텍스트를 분석하여 0, 1, 2점으로 채점하세요.
+            [엄격 채점 규칙 - 절대 준수]
+            1. 서지 정보 추출: 논문 제목(title), 저자(author - 주저자 위주), 발행 연도(year)를 정확히 추출하세요.
+            2. 지표 1.1 (맥락 및 환경): 핵심 특징(프로그램 유형, 교실/학교 유형[공립/사립], 교육과정, 지리적 위치, 지역사회 여건, 사회경제적 여건, 물리적 환경 상세 설명)이 기술되어야 합니다. 이 중 다수가 누락되거나 매우 일반적인 기술(예: "초등학교 교실에서 실시")에 그칠 경우 1점 이하를 부여하세요.
+            3. 지표 5.1/5.2: 직접적/신뢰로운 측정치(관찰, 자기보고 등 데이터)가 구체적으로 보고되지 않으면 0점 처리하세요.
+            4. 지표 5.3: 전 과정 균형 평가 여부가 확인되지 않으면 0점 처리하세요.
+            5. 지표 6.2: 기초선 상태(정의, 기간, 빈도, 비율 등)가 구체적이지 않고 나열식 기술이 부족하면 0점 처리하세요.
+            6. 지표 7.5: 최종 산출된 구체적인 신뢰도 수치(%)나 통계값(Kappa 등)이 텍스트 내에 명시되지 않았다면 무조건 0점 처리하세요. 단순히 "신뢰도를 구했다"는 서술은 0점입니다.
+            7. 지표 8.2: 수준/경향/중복/일관성에 대한 구체적 '텍스트 기술'이 없으면 1점 이하로 판정하세요.
+
+            JSON 포맷: { "paperInfo": { "title": "...", "author": "...", "year": "..." }, "analysis": [ { "id": "1.1", "score": 2, "evidence": "..." }, ... ] }`;
+            
+            const userPrompt = `논문 텍스트: ${text.substring(0, 75000)}\n\n분석 대상 지표: ${JSON.stringify(scrdFullMetrics)}`;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userPrompt }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+                const data = await response.json();
+                return JSON.parse(data.candidates[0].content.parts[0].text);
+            } catch (e) {
+                console.error(e);
+                return null;
+            } finally {
+                status.classList.add('hidden');
+            }
+        }
+
+        function updateSummary() {
+            const count = Object.keys(currentUserRatings).length;
+            document.getElementById('check-counter').innerText = `${count} / 21`;
+            
+            const totalScore = Object.values(currentUserRatings).reduce((a, b) => a + b, 0);
+            const maxPossible = 42; 
+            const percentage = Math.round((totalScore / maxPossible) * 100);
+
+            document.getElementById('final-total-score').innerText = totalScore;
+            document.getElementById('final-percent').innerText = `${percentage}%`;
+            document.getElementById('final-progress-bar').style.width = `${percentage}%`;
+        }
+
+        function handleRatingChange(id, score) {
+            currentUserRatings[id] = parseInt(score);
+            
+            const btnGroup = document.getElementById(`group-${id}`);
+            const buttons = btnGroup.querySelectorAll('.rating-btn');
+            buttons.forEach(btn => {
+                btn.className = 'rating-btn';
+                if (parseInt(btn.dataset.score) === currentUserRatings[id]) {
+                    btn.classList.add(`active-${currentUserRatings[id]}`);
+                }
+            });
+
+            const card = document.getElementById(`card-${id}`);
+            card.classList.remove('border-pastelPink', 'border-pastelMint', 'border-amber-200', 'bg-pastelMint/5', 'bg-amber-50/30');
+            if(score === 2) card.classList.add('border-pastelMint', 'bg-pastelMint/5');
+            else if(score === 1) card.classList.add('border-amber-200', 'bg-amber-50/30');
+            else card.classList.add('border-pastelPink');
+
+            updateSummary();
+        }
+
+        function renderReport(data) {
+            const container = document.getElementById('report-container');
+            const footer = document.getElementById('summary-footer');
+            container.innerHTML = "";
+            footer.classList.remove('hidden');
+            currentUserRatings = {}; 
+
+            document.getElementById('info-title').innerText = data.paperInfo.title || "제목 없음";
+            document.getElementById('info-author').innerText = data.paperInfo.author || "저자 정보 없음";
+            document.getElementById('info-year').innerText = data.paperInfo.year || "연도 미상";
+
+            scrdFullMetrics.forEach(group => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = "mb-8";
+                let groupHtml = `<div class="metric-group-title">${group.icon} ${group.group}</div><div class="grid grid-cols-1 gap-4">`;
+                
+                group.items.forEach(item => {
+                    const res = data.analysis.find(r => r.id === item.id) || { score: 0, evidence: "근거를 찾을 수 없습니다." };
+                    const initialScore = res.score || 0;
+                    currentUserRatings[item.id] = initialScore;
+                    
+                    const cardClass = initialScore === 2 ? 'border-pastelMint bg-pastelMint/5' : (initialScore === 1 ? 'border-amber-200 bg-amber-50/30' : 'border-pastelPink');
+
+                    groupHtml += `
+                        <div id="card-${item.id}" class="bg-white p-5 rounded-2xl border-2 transition-all shadow-sm ${cardClass}">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-grow pr-4">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-[10px] font-bold text-brand-500 uppercase tracking-widest">지표 ${item.id}</span>
+                                        <span class="text-[9px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 font-medium">AI 판정점수: ${initialScore}</span>
+                                    </div>
+                                    <h4 class="font-bold text-neutral-800 text-sm">${item.title}</h4>
+                                    <p class="text-[10px] text-neutral-400 mt-1">${item.desc}</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <div class="rating-group" id="group-${item.id}">
+                                        <div class="rating-btn ${initialScore === 0 ? 'active-0' : ''}" data-score="0" onclick="handleRatingChange('${item.id}', 0)">0</div>
+                                        <div class="rating-btn ${initialScore === 1 ? 'active-1' : ''}" data-score="1" onclick="handleRatingChange('${item.id}', 1)">1</div>
+                                        <div class="rating-btn ${initialScore === 2 ? 'active-2' : ''}" data-score="2" onclick="handleRatingChange('${item.id}', 2)">2</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="evidence-bubble">
+                                <div class="absolute -top-2 left-3 bg-white px-1.5 text-[8px] font-bold text-brand-400 uppercase border border-brand-100 rounded">Analysis Evidence</div>
+                                <span class="text-neutral-600">${res.evidence}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                groupHtml += `</div>`;
+                groupDiv.innerHTML = groupHtml;
+                container.appendChild(groupDiv);
+            });
+            updateSummary();
+        }
+
+        document.getElementById('upload-zone').addEventListener('click', () => document.getElementById('pdf-input').click());
+        document.getElementById('pdf-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const text = await extractText(file);
+            const data = await runAIAnalysis(text);
+            if(data) renderReport(data);
+        });
+    </script>
+</body>
+</html>
